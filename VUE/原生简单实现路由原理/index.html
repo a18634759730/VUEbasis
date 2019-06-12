@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>封装路由</title>
+    <style>
+        *{
+            padding:0;
+            margin: 0;
+            list-style: none;
+            text-decoration: none;
+            font-family: "微软雅黑";
+            box-sizing: border-box;
+        }
+        .container{
+            width:100%;
+            height:100%;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .container .header{
+            width:100%;
+            height:55px;
+            border-bottom:1px solid #ccc; 
+            display: flex;
+            align-items: center;
+            justify-content: space-around;                
+        }
+        .container .header a{
+            color: black;
+        }
+        .container .section{
+            width:100%;
+            flex: 1;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <a href="/home" class="router" replace="true">主页</a>
+            <a href="/news" class="router">新闻</a>
+            <a href="/team" class="router">团队</a>
+            <a href="/about" class="router">关于</a>
+        </header>
+        <section class="section" id="router-view">
+
+        </section>
+    </div>
+    <script>
+        function router(params){
+            //记录routes配置
+            this.routes = params.routes || [];
+            //记录路由模式
+            this.mode = params.mode || 'hash';
+
+            this.init = function(){
+                // 绑定路由响应事件
+                var that = this;
+                document.querySelectorAll(".router").forEach((item,index)=>{
+                    item.addEventListener("click",function(eve){
+                        // 阻止a标签的默认行为
+                        if ( eve && eve.preventDefault ){
+                            eve.preventDefault(); 
+                        }else{
+                            window.event.returnValue = false;  
+                        } 
+                        
+                        if (that.mode === 'hash'){
+                            // 判断是replace方法还是push方法
+                            if (this.getAttribute("replace")){
+                                var i = window.location.href.indexOf('#')
+                                // 通过replace方法直接替换url
+                                window.location.replace(
+                                    window.location.href.slice(0, i >= 0 ? i : 0) + '#' + this.getAttribute("href")
+                                )
+                            }else{
+                                // 通过赋值追加
+                                window.location.hash = this.getAttribute("href");
+                            }
+                        }else{
+                            if (this.getAttribute("replace")){
+                                window.history.replaceState({}, '', window.location.origin+this.getAttribute("href"))
+                            }else{
+                                window.history.pushState({}, '', window.location.origin+this.getAttribute("href"))
+                            }
+                            // 手动调用更新内容方法
+                            that.routerChange();
+                        }
+                        
+                    }, false);
+                });
+                // 监听路由改变
+                if (this.mode === 'hash'){
+                    window.addEventListener("hashchange",()=>{
+                        this.routerChange();
+                    });
+                }else{
+                    window.addEventListener('popstate', e => {
+                        console.log(123);
+                        this.routerChange();
+                    })
+                }
+                // 第一次进入的时候更新视图
+                this.routerChange();
+            }
+            this.routerChange = function(){
+                if (this.mode == 'hash'){
+                    let nowHash=window.location.hash;
+                    let index=this.routes.findIndex((item,index)=>{
+                        return nowHash == ('#'+item.path);
+                    });
+
+                    if(index>=0){
+                        // 查找到对应路由
+                        document.querySelector("#router-view").innerHTML=this.routes[index].component;
+                    }else {
+                        // 没找到对应路由，查找有没有*
+                        let defaultIndex=this.routes.findIndex((item,index)=>{
+                            return item.path=='*';
+                        });
+                        // 查找到*，执行重定向
+                        if(defaultIndex>=0){
+                            const i = window.location.href.indexOf('#')
+                            window.location.replace(
+                                window.location.href.slice(0, i >= 0 ? i : 0) + '#' + this.routes[defaultIndex].redirect
+                            )
+                        }
+                    }
+                }else{
+                    let path = window.location.href.replace(window.location.origin, '');
+                    let index=this.routes.findIndex((item,index)=>{
+                        console.log('path...', path, 'item.path...', item.path);
+                        return path == item.path;
+                    });
+                    if(index>=0){
+                        // 查找到对应路由
+                        document.querySelector("#router-view").innerHTML=this.routes[index].component;
+                    }else {
+                        // 没找到对应路由，查找有没有*
+                        let defaultIndex=this.routes.findIndex((item,index)=>{
+                            return item.path=='*';
+                        });
+                        // 查找到*，执行重定向
+                        if(defaultIndex>=0){
+                            window.history.replaceState({}, '', window.location.origin+this.routes[defaultIndex].redirect)
+                            this.routerChange();
+                        }
+                    }
+                }
+            }
+            this.init()
+        }
+        new router({
+            mode:'history',
+            routes:[
+                {path:'/home',component:'<h1>主页</h1><h4>新一代的工程师；我们啥都会</h4>'},
+                {path:'/news',component:'<h1>新闻</h1><h4>尘世间；迷途小码农</h4>'},
+                {path:'/team',component:'<h1>团队</h1><h4>团结！！！ 一起唱</h4>'},
+                {path:'/about',component:'<h1>关于</h1><h4>新一代的工程师；我们啥都会，我们啥都能干</h4>'},
+                {path:'*',redirect:'/home'}
+            ]
+        })
+    </script>
+</body>
+</html>
